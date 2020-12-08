@@ -1,0 +1,10 @@
+The AS_DGE_scheduler.py can be employed by a user, taking a study accession from ENA as an argument. It is used to retrieve information about the study and to start the pipeline.
+Interactivity is required to both allow necessary user input (select substudy when there is e.g. ChIP-Seq mixed with RNA-Seq, subset studies where the number of pairwise comparisons exceeds a certain limit) and to confirm whether the description provided on ENA is sufficient to detect replicates/samples.
+After confirmation from the user, a pickle object with the (updated) information is initiated, and a bash script starts snakemake, which loads the pickle object.
+
+The Whippet_go_term.R is part of the pipeline and takes summary stats from whippet to create a quality-control plot (Mapped Reads, Multimapped etc.).
+The frequency of AS types among different comparisons is calculated and visualized (e.g. you can see an increase in intron retention in higher temperatures when comparing cold_timepoint1_vs_cold_timepoint2 with heat_timepoint1_vs_heat_timepoint_2).
+Furthermore, GO Enrichment (mygene to convert all species-specific identifiers from annotation to entrez identifier, panther to retrieve associated GO terms species-independently, topGO to perform  enrichment, uses the hierarchical structure of GO Terms), of the AS genes of each comparison is visualized.
+It also investigates the overlap of AS genes (different/multiple events in the same gene are converged into one gene)
+and AS events (sets are intersections of exact events) among all comparisons using upSet plots.
+For each overlap among two conditions, the GO Enrichment is also performed.
