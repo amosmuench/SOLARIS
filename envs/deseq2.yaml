@@ -1,0 +1,15 @@
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - r-base
+  - bioconductor-deseq2
+  - bioconductor-tximport 
+  - bioconductor-rhdf5 
+  - bioconductor-genomicfeatures
+  - bioconductor-mygene
+  - bioconductor-genefilter
+  - r-pheatmap
+  - r-ggplot2
+  - r-svglite

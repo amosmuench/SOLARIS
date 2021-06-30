@@ -1,0 +1,9 @@
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.8
+  - click
+  - pyyaml
+  - numpy=1.19.1
+  - multiqc ==1.9

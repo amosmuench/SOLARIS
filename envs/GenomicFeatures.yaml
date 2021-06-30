@@ -1,0 +1,17 @@
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - r-biocmanager
+  - bioconductor-BiocGenerics >= 0.1.0
+  - bioconductor-IRanges >= 1.13.10
+  - bioconductor-GenomicRanges >= 1.7.17
+  - bioconductor-AnnotationDbi >= 1.15.39
+  - r-DBI >= 0.2-5
+  - r-RSQLite >= 0.8-1
+  - bioconductor-Biostrings >= 2.23.2
+  - bioconductor-rtracklayer >= 1.15.1
+  - bioconductor-biomaRt
+  - r-RCurl
+  - bioconductor-Biobase >= 2.15.1
+  - bioconductor-GenomicFeatures >=1.8.3

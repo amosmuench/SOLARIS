@@ -1,0 +1,6 @@
+channels:
+  - conda-forge
+dependecies:
+  - python >=3.7
+  - pandas
+  

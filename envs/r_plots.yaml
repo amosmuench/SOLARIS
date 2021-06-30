@@ -1,0 +1,16 @@
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - r-biocmanager
+  - r-ggplot2
+  - r-dplyr
+  - r-reshape2
+  - r-svglite
+  - r-tidyr
+  - r-tibble
+  - r-data.table
+  - bioconductor-ComplexHeatmap
+  - bioconductor-PANTHER.db
+  - bioconductor-mygene
+  - bioconductor-topgo

@@ -1,0 +1,13 @@
+fragment_length: 250
+fragment_length_sd: 10
+gene_ids_of_interest: "AT1G16610,AT1G23860,AT1G30460,AT1G30860,AT1G55310,AT2G17530,AT2G29210,AT2G37340,AT3G11590,AT3G53570,AT3G55460,AT4G24740,AT4G31580,AT4G32660,AT5G61270"
+AS_Whippet_DeltaPSI_threshold: 0.2
+AS_Whippet_Probability_threshold: 0.9
+
+
+julia_dir: "/home/amosmuench/.conda/envs/julia_0.6.1/bin/julia"
+whippet_dir: "/home/amosmuench/.conda/envs/julia_0.6.1/share/julia/site/v0.6/Whippet/bin"
+gtf_AS_isoforms: "/home/amosmuench/GSE124003/annotation/AtRTDv2_QUASI_19April2016.gtf"
+fasta: "/home/amosmuench/GSE124003/annotation/Arabidopsis_thaliana.TAIR10.dna.toplevel_Chr_names.fa"
+cdna_fasta: "/home/amosmuench/Pipeline17092020/annotation/Arabidopsis_thaliana.TAIR10.cdna.all.fa.gz"
+gff_dge: "/home/amosmuench/Pipeline17092020/annotation/AtRTD2_19April2016.gtf"
