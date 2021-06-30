@@ -1,5 +1,7 @@
-# SOLARIS
-Requirements:
+## SOLARIS
+
+![Alt text](https://github.com/amosmuench/SOLARIS/blob/main/SOLARIS_graphical_summary.png?raw=true "Alternative Splicing and Differential Gene Expression Pipeline using data from the European Nucleotide Archive")
+# Requirements:
 - Snakemake
 - Conda
 - Designed for SLURM Workload Manager
