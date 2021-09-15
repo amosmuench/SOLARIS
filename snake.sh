@@ -14,5 +14,5 @@ module load Miniconda3/4.7.10
 source activate /home/amosmuench/snakemake
 source activate /home/amosmuench/snakemake/envs/snakemake_pulp/
 
-cd /home/amosmuench/Pipeline17092020/
-snakemake -j 4 --use-conda --printshellcmds --until whippet_summary_plots -k 
+cd /home/amosmuench/SOLARIS/
+snakemake -j 4 --use-conda 

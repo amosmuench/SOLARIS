@@ -2,10 +2,10 @@ import requests
 import math
 import functools
 import os
-
+import argparse
 from io import StringIO
 import pandas as pd
-pd.options.mode.chained_assignment = None 
+pd.options.mode.chained_assignment = None
 from urllib.request import urlopen
 import xml.etree.ElementTree as et
 
@@ -15,38 +15,10 @@ import itertools
 
 import sys
 import pickle
-
-study=str(sys.argv[1])
-
-cwd = os.getcwd()
-
-output_dir=cwd+"/"
-if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
-
-print(f"Retrieving information for study {study} from ENA")
-
-
-
-study_table_request = requests.get(f"https://www.ebi.ac.uk/ena/portal/api/filereport?accession={study}&result=read_run&fields=study_accession,sample_accession,experiment_accession,run_accession,tax_id,scientific_name,fastq_ftp,submitted_ftp,sra_ftp&format=tsv&download=true")
-
-study_table=study_table_request.content
-
-study_table=str(study_table, 'utf-8')
-
-study_table=StringIO(study_table)
-study_table=pd.read_csv(study_table, sep='\t', lineterminator='\n')
-tax_id=study_table['tax_id'].tolist()
-sample_accession=study_table['sample_accession'].tolist()
-read_files=study_table['sample_accession'].tolist()
-
-fastq_ftp=study_table['fastq_ftp'].tolist()
-
-
-temp=[]
-for i in fastq_ftp:
-    temp.append(i.split(";"))
-
+parser = argparse.ArgumentParser()
+parser.add_argument("-ena",  help="Study Identifier from ENA, e.g. PRJNA176940", nargs=1)
+parser.add_argument('-local', help="Path to CSV file with one column for sample name (replicates should be given the same name) and one column containing the path to the read file (pair-end read files should be in the same cell, separated by a comma)",  nargs=1)
+args = parser.parse_args()
 
 
 def read_type_det(read_type):
@@ -59,105 +31,9 @@ def read_type_det(read_type):
             single = True
     return(single, paired)
 
-single, paired=read_type_det(temp)
-
-
-read_type=[]
-first=None
-last=None
-if paired:
-    for i in temp:
-
-        first=i[0]
-
-        first=os.path.basename(first)
-        last=i[1]
-        last=os.path.basename(last)
-
-        both=(first, last)
-        read_type.append(both)
-
-else:
-
-    for i in temp:
-
-        first=i[0]
-        first=os.path.basename(first)
-        read_type.append(first)
-
-
-
-
-
-
-run_accession=study_table['run_accession'].tolist()
-
-xml_links=[]
-for i in sample_accession:
-    xml_links.append(f"https://www.ebi.ac.uk/ena/browser/api/xml/{i}")
-
-
-
-xml_list= [urlopen(link).read() for link in xml_links]
-
-
-xtree=[et.ElementTree(et.fromstring(xml)) for xml in xml_list]
-
-
-xroot=[xtree_i.getroot() for xtree_i in xtree]
-
-
-sample_attributes=[]
-for i in xroot:
-    xheader_inner=[]
-    xvalues_inner=[]
-    for j in i.findall(".//SAMPLE_ATTRIBUTE/TAG"):
-                  
-        xheader_inner.append(j.text)
-    for j in i.findall(".//SAMPLE_ATTRIBUTE/VALUE"):
-        
-        xvalues_inner.append(j.text)
-    attributes_inner=dict(zip(xheader_inner, xvalues_inner))
-    sample_attributes.append(attributes_inner)
- 
-index=0
-for i in sample_attributes:
-    i["sample_accession"]=sample_accession[index]
-    index+=1
-
-
-index=0
-for i in sample_attributes:
-    i["run_accession"]=run_accession[index]
-    index+=1
-
-index=0
-for i in sample_attributes:
-    i["read_file"]=read_type[index]
-    index+=1
-
-sample_attributes=pd.DataFrame(sample_attributes)
-
-
-sample_attributes = sample_attributes[sample_attributes.columns.drop(list(sample_attributes.filter(regex='ENA'))) ]
-print(sample_attributes)
-
-sample_info_col_list=['sample_accession', 'run_accession', 'read_file']
-
-columns_useable=sample_attributes.columns[~sample_attributes.columns.isin(sample_info_col_list)]
-
-
-
-for col in columns_useable:
-    
-    if len(sample_attributes[col].unique()) == 1:
-        sample_attributes.drop(col,inplace=True,axis=1)
-
-
-
 def is_redundant(df, A, B):
     df=df[df.columns[~df.columns.isin(sample_info_col_list)]]
-    
+
     left=A
     right=B
     #print(df)
@@ -178,7 +54,7 @@ def drop_redundant(df, redundant_groups):
     redundant_groups.sort()
 
     if not redundant_groups:
-      
+
         return(df)
     else:
 
@@ -282,14 +158,10 @@ def factors_levels_size(dict):
     #takes dict of factor_levels
     all_levels=list(dict.values())
     level_size=[]
-    print("all_levels")
-    print(all_levels)
     for i in all_levels:
         level_size.append(len(i))
-    print("factors_levels_size")
-    
-    print(level_size)
-    
+
+
     return(level_size)
 
 
@@ -306,9 +178,9 @@ def multiplier(list):
     temp=1
     for i in list:
       print(i)
-      temp=i*temp 
-      print(temp)
-        
+      temp=i*temp
+
+
     print("multiplier")
     print(temp)
     return(temp)
@@ -316,15 +188,14 @@ def multiplier(list):
 #this is an ugly argument
 def replicates_def(df, level_size):
     full_df=df[df.columns[~df.columns.isin(sample_info_col_list)]]
-    print("FULL DF2",full_df)
+
     all_levels=list(full_df.keys())
-    print(all_levels)
-    gcds=[]
-    print("ALL",df.groupby(all_levels).size())
+
+
     grouped=df.groupby(all_levels).size()
     number_of_replicates=min(grouped.values.tolist())
 
-    print("GCDS", gcds)
+
 
     if number_of_replicates > 1:
         replicates=True
@@ -406,22 +277,23 @@ def subset_sample_table(subset_by_level, df):
 
 
 def replicates_merger(df, non_unique_col_list, replicate_nr):
+    print("reo", replicate_nr)
     keep_list=['sample_accession', 'run_accession', 'read_file']
-    a=non_unique_col_list[0] 
+    a=non_unique_col_list[0]
 
     test=df.groupby(df[a])
-    test.describe()
+    print(test.describe())
     df_temp=(df.groupby(df[a].tolist())
            .apply(lambda x: tuple(x.index))
            .reset_index(name='repl_index'))
-           
+
 
     b=non_unique_col_list[len(non_unique_col_list)-1]
 
     df_temp2=(df.groupby(df[b].tolist())
            .apply(lambda x: tuple(x.index))
            .reset_index(name='repl_index'))
-           
+
 
     #print(a)
     repl_index=df_temp['repl_index'].tolist()
@@ -431,7 +303,7 @@ def replicates_merger(df, non_unique_col_list, replicate_nr):
 
     for i in range(0,len(repl_index)):
         min_repl1.append(len(repl_index[i]))
-    for j in range(0, len(repl_index2)):    
+    for j in range(0, len(repl_index2)):
         min_repl2.append(len(repl_index2[j]))
     indices1 = [i for i, x in enumerate(min_repl1) if x == min(min_repl1)]
     max1 = [i for i, x in enumerate(min_repl1) if x == max(min_repl1)]
@@ -440,20 +312,25 @@ def replicates_merger(df, non_unique_col_list, replicate_nr):
 
     max1=[repl_index[i] for i in max1]
     max2=[repl_index2[i] for i in max2]
-    
+
     max1=[item for t in max1 for item in t]
     max2=[item for t in max2 for item in t]
-
+    print(max1)
+    print(max2)
     add=list(set(max1) & set(list(max2) ))
     add=tuple(add)
-
+    print(add)
     repl_index=[repl_index[i] for i in indices1]
+    print("r1")
+    print(repl_index)
     repl_index2=[repl_index2[i] for i in indices2]
+    print("r")
+    print(repl_index2)
 
 
-    repl_index=repl_index+repl_index2+[add]
-    
+    repl_index=repl_index#+repl_index2+[add]
 
+    print(repl_index)
     list_index=[]
     for i in repl_index:
         list_index.append(list(i))
@@ -462,6 +339,7 @@ def replicates_merger(df, non_unique_col_list, replicate_nr):
     sample_accession_new=[]
     run_accession_new=[]
     read_file_new=[]
+    print(list_index)
     for i in list_index:
         sample_accession_new_row=[]
         sample_accession_new_row.append(df['sample_accession'].iloc[i].tolist())
@@ -485,7 +363,7 @@ def replicates_merger(df, non_unique_col_list, replicate_nr):
     replicates_columns=[]
     for i in replicates_list:
         replicates_columns.append(str(i))
-
+    print(replicates_columns)
     naming=["sample_accession_repl", "run_accession_repl","read_file_repl"] #3 three times
     out=list(itertools.product(naming, replicates_columns))
 
@@ -493,7 +371,7 @@ def replicates_merger(df, non_unique_col_list, replicate_nr):
     for i in out:
         detouple+=i
     detouple=iter(detouple)
-
+    print(detouple)
     replicates_columns=[i+next(detouple, '') for i in detouple]
 
 
@@ -503,12 +381,15 @@ def replicates_merger(df, non_unique_col_list, replicate_nr):
 
     read_file_new=pd.DataFrame(read_file_new)
 
+    print(read_file_new)
+
 
         #merge all together unique/dropna and the between newly created ones
     out_df=pd.concat([sample_accession_new, run_accession_new, read_file_new], axis=1)
-    
 
 
+    print(out_df)
+    print(replicates_columns)
     out_df.columns=replicates_columns
     out_df["sample_accession"]=out_df.filter(regex=("sample_accession*")).values.tolist()
     out_df["run_accession"]=out_df.filter(regex=("run_accession*")).values.tolist()
@@ -568,7 +449,7 @@ def drop_redundant_v2(df, redundant_groups):
         #print(red_pairs_list)
 
         for i in red_pairs_list:
- 
+
             int1=to_be_merged_df.groupby(f'{i[0]}')
 
             if len(to_be_merged_df.columns)>2:
@@ -593,11 +474,11 @@ def drop_redundant_v2(df, redundant_groups):
 
                 new_redundant_groups=redundant_groups
                 new_redundant_groups.remove(i[0])
-                
+
                 new_redundant_groups.remove(i[1])
                 new_redundant_groups.append(new_red_group_member)
 
-                
+
                 return(drop_redundant_v2(to_be_merged_df, new_redundant_groups))
                 continue
 
@@ -814,8 +695,8 @@ def contrast_prompter():
         comp_A_names_r=[item for item in comp_A_names for i in range(0,replicates_nr[1])]
         print("reps", comp_A_names_r)
         comp_A_names_replicates=[i+ "_R" + str(j) for i,j in zip(comp_A_names_r,replicate_suffix)]
-        
-        comp_A_names_replicates = [comp_A_names_replicates[i:i+replicates_nr[1]] for i in range(0, len(comp_A_names_replicates), replicates_nr[1])] 
+
+        comp_A_names_replicates = [comp_A_names_replicates[i:i+replicates_nr[1]] for i in range(0, len(comp_A_names_replicates), replicates_nr[1])]
         print(comp_A_names_replicates)
 
         run_accession_list_A
@@ -855,15 +736,7 @@ def contrast_prompter():
 
         key_1 = 'A'
         key_2 = 'B'
-        print("CONTRASTNAMES", contrast_names)
         comparison_dict={k : {key_1 : v1, key_2 : v2} for k,v1,v2 in zip(contrast_names, run_accession_list_A, run_accession_list_B)}
-
-
-
-
-
-
-
 
 
 
@@ -901,44 +774,213 @@ def contrast_prompter():
             not_started=False
         if start_pipeline=="n":
             exit()
-sample_attributes_confirmed, contrast_indices_confirmed=contrast_prompter()
 
-sample_attributes_confirmed.reset_index(drop=True, inplace=True)
+if args.ena:
+  study=args.ena #str(sys.argv[1])
+  study=''.join(study)
+  cwd = os.getcwd()
 
+  output_dir=cwd+"/"
+  if not os.path.exists(output_dir):
+      os.makedirs(output_dir)
 
-
-
-comp_A=[]
-comp_B=[]
-
-
-sample_attributes_confirmed['comp'] = sample_attributes_confirmed[sample_attributes_confirmed.columns[~sample_attributes_confirmed.columns.isin(sample_info_col_list)]].apply(
-    lambda x: '___'.join(x.astype(str)),
-    axis=1
-)
+  print(f"Retrieving information for study {study} from ENA")
 
 
-comp=sample_attributes_confirmed['comp'].tolist()
-run_list=sample_attributes_confirmed['read_file'].tolist()
+  pd.set_option('display.max_columns', 500)
+  pd.set_option('display.width', 1000)
+  study_table_request = requests.get(f"https://www.ebi.ac.uk/ena/portal/api/filereport?accession={study}&result=read_run&fields=study_accession,sample_accession,experiment_accession,run_accession,tax_id,scientific_name,fastq_ftp,submitted_ftp,sra_ftp&format=tsv&download=true")
+  print(study_table_request)
+  study_table=study_table_request.content
 
-A=[i[0] for i in contrast_indices_confirmed]
-comp_A_names=[comp[i] for i in A]
-run_list_A=[run_list[i] for i in A]
-B=[i[1] for i in contrast_indices_confirmed]
-comp_B_names=[comp[i] for i in B]
-run_list_B=[run_list[i] for i in B]
+  study_table=str(study_table, 'utf-8')
+  print(study_table)
+  study_table=StringIO(study_table)
+  print(study_table)
+  study_table=pd.read_csv(study_table, sep='\t', lineterminator='\n')
+  print(study_table)
+  tax_id=study_table['tax_id'].tolist()
+  sample_accession=study_table['sample_accession'].tolist()
+  read_files=study_table['sample_accession'].tolist()
 
-dic_A={}
-index=0
-for i in comp_A_names:
-    dic_A[i]=run_list_A[index]
-    index+=1
+  fastq_ftp=study_table['fastq_ftp'].tolist()
 
-dic_B={}
-index=0
-for i in comp_B_names:
-    dic_B[i]=run_list_B[index]
-    index+=1
 
-final=list(zip(dic_A, dic_B))
+  temp=[]
+  for i in fastq_ftp:
+      temp.append(i.split(";"))
 
+
+
+
+
+  single, paired=read_type_det(temp)
+
+
+  read_type=[]
+  first=None
+  last=None
+  if paired:
+      for i in temp:
+
+          first=i[0]
+
+          first=os.path.basename(first)
+          last=i[1]
+          last=os.path.basename(last)
+
+          both=(first, last)
+          read_type.append(both)
+
+  else:
+
+      for i in temp:
+
+          first=i[0]
+          first=os.path.basename(first)
+          read_type.append(first)
+
+
+
+
+
+
+  run_accession=study_table['run_accession'].tolist()
+
+  xml_links=[]
+  for i in sample_accession:
+      xml_links.append(f"https://www.ebi.ac.uk/ena/browser/api/xml/{i}")
+
+
+
+  xml_list= [urlopen(link).read() for link in xml_links]
+
+
+  xtree=[et.ElementTree(et.fromstring(xml)) for xml in xml_list]
+
+
+  xroot=[xtree_i.getroot() for xtree_i in xtree]
+
+
+  sample_attributes=[]
+  for i in xroot:
+      xheader_inner=[]
+      xvalues_inner=[]
+      for j in i.findall(".//SAMPLE_ATTRIBUTE/TAG"):
+
+          xheader_inner.append(j.text)
+      for j in i.findall(".//SAMPLE_ATTRIBUTE/VALUE"):
+
+          xvalues_inner.append(j.text)
+      attributes_inner=dict(zip(xheader_inner, xvalues_inner))
+      sample_attributes.append(attributes_inner)
+
+  index=0
+  for i in sample_attributes:
+      i["sample_accession"]=sample_accession[index]
+      index+=1
+
+
+  index=0
+  for i in sample_attributes:
+      i["run_accession"]=run_accession[index]
+      index+=1
+
+  index=0
+  for i in sample_attributes:
+      i["read_file"]=read_type[index]
+      index+=1
+  print("b4")
+  print(sample_attributes)
+  sample_attributes=pd.DataFrame(sample_attributes)
+
+
+  sample_attributes = sample_attributes[sample_attributes.columns.drop(list(sample_attributes.filter(regex='ENA'))) ]
+  print("here")
+  print(sample_attributes)
+
+  sample_info_col_list=['sample_accession', 'run_accession', 'read_file']
+
+  columns_useable=sample_attributes.columns[~sample_attributes.columns.isin(sample_info_col_list)]
+
+  print(columns_useable)
+
+  for col in columns_useable:
+
+      if len(sample_attributes[col].unique()) == 1:
+          sample_attributes.drop(col,inplace=True,axis=1)
+
+
+
+
+  sample_attributes_confirmed, contrast_indices_confirmed=contrast_prompter()
+
+if args.local:
+   print("local mode")
+   print(''.join(args.local))
+
+   study_table=pd.read_csv(''.join(args.local), sep=',', lineterminator='\n')
+   print(study_table)
+   study=study_table['study_accession'].tolist()[0]
+   tax_id=study_table['tax_id'].tolist()
+   sample_accession=study_table['sample_accession'].tolist()
+   read_files=study_table['sample_accession'].tolist()
+
+   fastq_ftp=study_table['fastq_ftp'].tolist()
+
+
+   temp=[]
+   for i in fastq_ftp:
+       temp.append(i.split(";"))
+
+
+   single, paired=read_type_det(temp)
+
+
+   read_type=[]
+   first=None
+   last=None
+   if paired:
+       for i in temp:
+
+           first=i[0]
+
+           first=os.path.basename(first)
+           last=i[1]
+           last=os.path.basename(last)
+
+           both=(first, last)
+           read_type.append(both)
+   else:
+       for i in temp:
+           first=i[0]
+           first=os.path.basename(first)
+           read_type.append(first)
+
+
+
+
+
+
+   run_accession=study_table['run_accession'].tolist()
+   sample_attributes=study_table
+   sample_info_col_list=['sample_accession', 'run_accession', 'read_file']
+
+   columns_useable=sample_attributes.columns[~sample_attributes.columns.isin(sample_info_col_list)]
+
+
+
+   for col in columns_useable:
+
+      if len(sample_attributes[col].unique()) == 1:
+         sample_attributes.drop(col,inplace=True,axis=1)
+
+
+   cwd = os.getcwd()
+
+   output_dir=cwd+"/"
+   if not os.path.exists(output_dir):
+      os.makedirs(output_dir)
+
+
+   sample_attributes_confirmed, contrast_indices_confirmed=contrast_prompter()
